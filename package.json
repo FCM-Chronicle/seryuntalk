@@ -1,0 +1,29 @@
+{
+  "name": "seoul-chat-app",
+  "version": "1.0.0",
+  "description": "실시간 채팅 웹 애플리케이션",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "chat",
+    "websocket",
+    "socket.io",
+    "realtime",
+    "seoul"
+  ],
+  "author": "",
+  "license": "MIT"
+}
