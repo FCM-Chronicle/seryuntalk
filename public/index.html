@@ -770,27 +770,37 @@ body {
 .pvp-player::before {
     content: '';
     position: absolute;
-    top: -3px;
+    top: -15px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 12px solid currentColor;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 10px solid #ffffff;
     transition: transform 0.1s ease;
+    z-index: 10;
 }
 
 .pvp-player.facing-right::before {
     transform: translateX(-50%) rotate(90deg);
+    top: 50%;
+    left: 35px;
+    margin-top: -5px;
 }
 
 .pvp-player.facing-down::before {
     transform: translateX(-50%) rotate(180deg);
+    top: 35px;
+    left: 50%;
+    margin-left: -5px;
 }
 
 .pvp-player.facing-left::before {
     transform: translateX(-50%) rotate(270deg);
+    top: 50%;
+    left: -15px;
+    margin-top: -5px;
 }
 
 .bullet {
@@ -857,7 +867,75 @@ body {
     color: #ff4444;
 }
 
-/* 수정 모드 */
+/* PvP 대전 신청 모달 */
+.pvp-request-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2800;
+}
+
+.pvp-request-content {
+    background: #000000;
+    border: 2px solid #262626;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.pvp-request-content h3 {
+    color: #ffffff;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.pvp-request-info {
+    color: #8e8e8e;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.pvp-request-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.pvp-accept-btn, .pvp-decline-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pvp-accept-btn {
+    background: #00aa00;
+    color: white;
+}
+
+.pvp-accept-btn:hover {
+    background: #00cc00;
+}
+
+.pvp-decline-btn {
+    background: #aa0000;
+    color: white;
+}
+
+.pvp-decline-btn:hover {
+    background: #cc0000;
+}
 .editing-message {
     background: rgba(0, 149, 246, 0.1) !important;
     border: 1px solid #0095f6 !important;
@@ -1045,8 +1123,8 @@ body {
                     <div class="game-option-desc">혼자서 장애물을 피하며 점수를 얻는 게임</div>
                 </div>
                 <div class="game-option" id="pvp-game-option">
-                    <div class="game-option-title">⚔️ 1대1 PvP</div>
-                    <div class="game-option-desc">다른 플레이어와 대결하는 슈팅 게임</div>
+                    <div class="game-option-title">⚔️ 1대1 PvP 신청</div>
+                    <div class="game-option-desc">온라인 사용자에게 대전을 신청하는 슈팅 게임</div>
                 </div>
             </div>
         </div>
@@ -1107,6 +1185,20 @@ body {
             </div>
             <div class="game-over-screen" id="game-over-screen">
                 <div class="game-over-text" id="game-over-text"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PvP 대전 신청 모달 -->
+    <div id="pvp-request-modal" class="pvp-request-modal">
+        <div class="pvp-request-content">
+            <h3>⚔️ PvP 대전 신청</h3>
+            <div class="pvp-request-info">
+                <span id="challenger-name">플레이어</span>님이 당신에게 1대1 대전을 신청했습니다!
+            </div>
+            <div class="pvp-request-buttons">
+                <button class="pvp-accept-btn" id="pvp-accept">수락</button>
+                <button class="pvp-decline-btn" id="pvp-decline">거절</button>
             </div>
         </div>
     </div>
