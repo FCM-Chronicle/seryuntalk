@@ -1,4 +1,148 @@
-const express = require('express');
+// PvP 대전 신청 보내기
+  socket.on('sendPvPRequest', (data) => {
+    const challenger = activeUsers[socket.id];
+    
+    if (!challenger) return;
+    
+    // 대상 사용자 찾기
+    let targetSocketId = null;
+    for (const id in activeUsers) {
+      if (activeUsers[id].username === data.targetUsername) {
+        targetSocketId = id;
+        break;
+      }
+    }
+    
+    if (!targetSocketId) {
+      socket.emit('pvpGameError', { message: '대상 사용자를 찾을 수 없습니다.' });
+      return;
+    }
+    
+    // 이미 게임 중인지 확인
+    for (const gameId in pvpGames) {
+      const game = pvpGames[gameId];
+      if (game.player1.id === socket.id || game.player2.id === socket.id ||
+          game.player1.id === targetSocketId || game.player2.id === targetSocketId) {
+        socket.emit('pvpGameError', { message: '이미 게임에 참여 중입니다.' });
+        return;
+      }
+    }
+    
+    // 대전 신청 생성
+    const requestId = `req_${requestIdCounter++}`;
+    pvpRequests[requestId] = {
+      challengerId: socket.id,
+      challengerName: challenger.username,
+      targetId: targetSocketId,
+      targetName: activeUsers[targetSocketId].username,
+      timestamp: Date.now()
+    };
+    
+    // 대상에게 대전 신청 전송
+    io.to(targetSocketId).emit('pvpRequestReceived', {
+      requestId: requestId,
+      challengerName: challenger.username
+    });
+    
+    console.log(`${challenger.username}님이 ${activeUsers[targetSocketId].username}님에게 PvP 대전 신청`);
+    
+    // 30초 후 자동 만료
+    setTimeout(() => {
+      if (pvpRequests[requestId]) {
+        delete pvpRequests[requestId];
+        io.to(socket.id).emit('pvpRequestExpired', { targetName: activeUsers[targetSocketId]?.username });
+      }
+    }, 30000);
+  });
+
+  // PvP 대전 신청 수락
+  socket.on('acceptPvPRequest', () => {
+    // 현재 사용자에게 온 대전 신청 찾기
+    let request = null;
+    let requestId = null;
+    
+    for (const id in pvpRequests) {
+      if (pvpRequests[id].targetId === socket.id) {
+        request = pvpRequests[id];
+        requestId = id;
+        break;
+      }
+    }
+    
+    if (!request) {
+      socket.emit('pvpGameError', { message: '대전 신청을 찾을 수 없습니다.' });
+      return;
+    }
+    
+    // 대전 신청 삭제
+    delete pvpRequests[requestId];
+    
+    // 게임 생성
+    const challengerUser = activeUsers[request.challengerId];
+    const targetUser = activeUsers[request.targetId];
+    
+    if (!challengerUser || !targetUser) {
+      socket.emit('pvpGameError', { message: '상대방과의 연결이 끊어졌습니다.' });
+      return;
+    }
+    
+    const game = new PvPGame(
+      { id: request.challengerId, username: challengerUser.username },
+      { id: request.targetId, username: targetUser.username }
+    );
+    pvpGames[game.id] = game;
+    
+    console.log(`PvP 게임 생성: ${game.id}, 플레이어: ${challengerUser.username} vs ${targetUser.username}`);
+    
+    // 양쪽 플레이어에게 게임 시작 알림
+    io.to(request.challengerId).emit('pvpGameCreated', {
+      gameId: game.id,
+      isPlayer1: true,
+      player1: { username: challengerUser.username },
+      player2: { username: targetUser.username }
+    });
+    
+    io.to(request.targetId).emit('pvpGameAccepted', {
+      gameId: game.id,
+      isPlayer1: false,
+      player1: { username: challengerUser.username },
+      player2: { username: targetUser.username }
+    });
+  });
+
+  // PvP 대전 신청 거절
+  socket.on('declinePvPRequest', () => {
+    // 현재 사용자에게 온 대전 신청 찾기
+    let request = null;
+    let requestId = null;
+    
+    for (const id in pvpRequests) {
+      if (pvpRequests[id].targetId === socket.id) {
+        request = pvpRequests[id];
+        requestId = id;
+        break;
+      }
+    }
+    
+    if (!request) return;
+    
+    // 신청자에게 거절 알림
+    io.to(request.challengerId).emit('pvpRequestDeclined', {
+      targetName: activeUsers[request.targetId].username
+    });
+    
+    // 대전 신청 삭제
+    delete pvpRequests[requestId];
+    
+    console.log(`${activeUsers[request.targetId].username}님이 ${request.challengerName}님의 PvP 대전 신청 거절`);
+  });
+
+  // 기존 PvP 게임 요청 처리 (제거됨 - 이제 사용하지 않음)
+  /*
+  socket.on('requestPvPGame', () => {
+    // 이 부분은 더 이상 사용하지 않음
+  });
+  */const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
@@ -56,8 +200,9 @@ const userMessages = {}; // 사용자별 메시지 저장
 
 // PvP 게임 관련 저장소
 const pvpGames = {}; // 진행 중인 PvP 게임들
-const waitingPlayers = []; // PvP 게임을 기다리는 플레이어들
+const pvpRequests = {}; // 대전 신청들 { requestId: { challenger, target, timestamp } }
 let gameIdCounter = 1;
+let requestIdCounter = 1;
 
 // PvP 게임 클래스
 class PvPGame {
@@ -121,13 +266,18 @@ class PvPGame {
         return;
       }
       
-      // 총알 이동
-      switch (bullet.direction) {
-        case 'up': bullet.position.y -= bullet.speed; break;
-        case 'down': bullet.position.y += bullet.speed; break;
-        case 'left': bullet.position.x -= bullet.speed; break;
-        case 'right': bullet.position.x += bullet.speed; break;
-      }
+      // 총알 이동 (대각선 지원)
+      const directions = bullet.direction.split('-');
+      const speed = bullet.speed;
+      
+      directions.forEach(dir => {
+        switch (dir) {
+          case 'up': bullet.position.y -= speed; break;
+          case 'down': bullet.position.y += speed; break;
+          case 'left': bullet.position.x -= speed; break;
+          case 'right': bullet.position.x += speed; break;
+        }
+      });
       
       // 경계 체크
       if (bullet.position.x < 0 || bullet.position.x > 760 || 
@@ -142,16 +292,16 @@ class PvPGame {
       
     }, 16); // 60fps
     
-    // 5초 후 총알 제거
+    // 3초 후 총알 제거 (범위 감소)
     setTimeout(() => {
       this.removeBullet(bullet.id);
       clearInterval(moveInterval);
-    }, 5000);
+    }, 3000);
   }
 
   // 총알과 플레이어 충돌 검사
   checkBulletCollisions(bullet) {
-    const hitRadius = 20; // 충돌 반경
+    const hitRadius = 25; // 충돌 반경 증가
     
     // 자신의 총알로는 자신을 맞힐 수 없음
     const targetPlayer = bullet.playerId === this.player1.id ? this.player2 : this.player1;
@@ -165,6 +315,8 @@ class PvPGame {
       // 충돌 발생!
       targetPlayer.health--;
       this.removeBullet(bullet.id);
+      
+      console.log(`플레이어 피격! ${targetPlayer.username} 체력: ${targetPlayer.health}`);
       
       // 피격 이벤트 전송
       io.to(this.player1.id).emit('pvpPlayerHit', {
@@ -527,11 +679,15 @@ io.on('connection', (socket) => {
     if (user) {
       console.log('사용자 퇴장:', user.username);
       
-      // PvP 대기열에서 제거
-      const waitingIndex = waitingPlayers.findIndex(p => p.id === socket.id);
-      if (waitingIndex !== -1) {
-        waitingPlayers.splice(waitingIndex, 1);
-        console.log(`${user.username}님이 PvP 대기열에서 제거되었습니다.`);
+      // PvP 대전 신청들 정리
+      for (const requestId in pvpRequests) {
+        const request = pvpRequests[requestId];
+        if (request.challengerId === socket.id || request.targetId === socket.id) {
+          // 상대방에게 알림
+          const otherUserId = request.challengerId === socket.id ? request.targetId : request.challengerId;
+          io.to(otherUserId).emit('pvpRequestCancelled', { reason: '상대방이 연결을 끊었습니다.' });
+          delete pvpRequests[requestId];
+        }
       }
       
       // 진행 중인 PvP 게임 체크
