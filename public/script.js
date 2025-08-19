@@ -33,11 +33,12 @@ let player2Health = 3;
 let bullets = [];
 let myPosition = { x: 100, y: 100 };
 let opponentPosition = { x: 200, y: 200 };
-let myDirection = 'up'; // up, down, left, right
+let myDirection = 'up'; // up, down, left, right, up-left, up-right, down-left, down-right
 let opponentDirection = 'up';
 let pvpKeys = {};
 let gameStarted = false;
 let countdownActive = false;
+let lastMoveTime = 0;
 
 // 랜덤 색상 생성
 function getRandomColor() {
@@ -493,14 +494,37 @@ function endRacingGame() {
     }
 }
 
-// PvP 게임 요청
+// PvP 게임 요청 (사용자 선택 방식)
 function requestPvPGame() {
     hideGameSelection();
-    socket.emit('requestPvPGame');
     
-    // PvP 게임 화면 표시
-    document.getElementById('pvp-game-container').style.display = 'flex';
-    document.getElementById('waiting-message').style.display = 'block';
+    // 온라인 사용자 목록 표시 (자신 제외)
+    const availableUsers = [];
+    for (const userId in onlineUsers) {
+        if (userId !== socket.id && onlineUsers[userId].username !== username) {
+            availableUsers.push(onlineUsers[userId]);
+        }
+    }
+    
+    if (availableUsers.length === 0) {
+        alert('대전할 수 있는 다른 사용자가 없습니다.');
+        return;
+    }
+    
+    // 사용자 선택 다이얼로그
+    let userList = '대전할 상대를 선택하세요:\n\n';
+    availableUsers.forEach((user, index) => {
+        userList += `${index + 1}. ${user.username}\n`;
+    });
+    
+    const choice = prompt(userList + '\n번호를 입력하세요:');
+    const choiceNum = parseInt(choice);
+    
+    if (choiceNum && choiceNum >= 1 && choiceNum <= availableUsers.length) {
+        const targetUser = availableUsers[choiceNum - 1];
+        socket.emit('sendPvPRequest', { targetUsername: targetUser.username });
+        alert(`${targetUser.username}님에게 대전 신청을 보냈습니다. 응답을 기다려주세요.`);
+    }
 }
 
 // PvP 게임 초기화
@@ -868,6 +892,17 @@ document.addEventListener('DOMContentLoaded', () => {
         endPvPGame();
     });
     
+    // PvP 대전 신청 관련
+    document.getElementById('pvp-accept').addEventListener('click', () => {
+        socket.emit('acceptPvPRequest');
+        document.getElementById('pvp-request-modal').style.display = 'none';
+    });
+    
+    document.getElementById('pvp-decline').addEventListener('click', () => {
+        socket.emit('declinePvPRequest');
+        document.getElementById('pvp-request-modal').style.display = 'none';
+    });
+    
     // 이모지 선택기 외부 클릭 시 닫기
     document.addEventListener('click', (e) => {
         const picker = document.getElementById('emoji-picker');
@@ -951,40 +986,56 @@ document.addEventListener('keydown', (e) => {
     
     // PvP 게임 키보드 조작
     if (pvpGameActive && gameStarted && !countdownActive) {
+        const currentTime = Date.now();
+        if (currentTime - lastMoveTime < 16) return; // 60fps 제한
+        
         pvpKeys[e.code] = true;
         
-        // 이동 처리
-        const speed = 3;
+        // 이동 처리 (속도 증가)
+        const speed = 8; // 3에서 8로 증가
         let moved = false;
         let newDirection = myDirection;
+        
+        // 대각선 이동을 위한 방향 계산
+        let vertical = '';
+        let horizontal = '';
         
         if (pvpKeys['KeyW'] || pvpKeys['ArrowUp']) {
             if (myPosition.y > 0) {
                 myPosition.y -= speed;
-                newDirection = 'up';
+                vertical = 'up';
                 moved = true;
             }
         }
         if (pvpKeys['KeyS'] || pvpKeys['ArrowDown']) {
             if (myPosition.y < 490) {
                 myPosition.y += speed;
-                newDirection = 'down';
+                vertical = 'down';
                 moved = true;
             }
         }
         if (pvpKeys['KeyA'] || pvpKeys['ArrowLeft']) {
             if (myPosition.x > 0) {
                 myPosition.x -= speed;
-                newDirection = 'left';
+                horizontal = 'left';
                 moved = true;
             }
         }
         if (pvpKeys['KeyD'] || pvpKeys['ArrowRight']) {
             if (myPosition.x < 730) {
                 myPosition.x += speed;
-                newDirection = 'right';
+                horizontal = 'right';
                 moved = true;
             }
+        }
+        
+        // 대각선 방향 설정
+        if (vertical && horizontal) {
+            newDirection = vertical + '-' + horizontal;
+        } else if (vertical) {
+            newDirection = vertical;
+        } else if (horizontal) {
+            newDirection = horizontal;
         }
         
         // 방향이 바뀌었으면 업데이트
@@ -1001,6 +1052,7 @@ document.addEventListener('keydown', (e) => {
         
         // 위치나 방향이 변경되었으면 서버에 전송
         if (moved) {
+            lastMoveTime = currentTime;
             updatePvPPlayerPositions();
             socket.emit('pvpMove', {
                 gameId: pvpGameId,
@@ -1091,6 +1143,22 @@ socket.on('messageEdited', (data) => {
 });
 
 // PvP 게임 관련 소켓 이벤트들
+socket.on('pvpRequestReceived', (data) => {
+    console.log('PvP 대전 신청 받음:', data);
+    document.getElementById('challenger-name').textContent = data.challengerName;
+    document.getElementById('pvp-request-modal').style.display = 'flex';
+});
+
+socket.on('pvpRequestAccepted', (gameData) => {
+    console.log('PvP 대전 신청 수락됨:', gameData);
+    initPvPGame(gameData);
+});
+
+socket.on('pvpRequestDeclined', (data) => {
+    console.log('PvP 대전 신청 거절됨:', data);
+    alert(`${data.targetName}님이 대전 신청을 거절했습니다.`);
+});
+
 socket.on('pvpGameCreated', (gameData) => {
     console.log('PvP 게임 생성됨:', gameData);
     initPvPGame(gameData);
