@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>영어 학습</title>
+   <!-- Socket.IO 클라이언트 라이브러리 추가 -->
+   <script src="/socket.io/socket.io.js"></script>
+   <style>
+/* 인스타그램 DM 스타일 채팅 앱 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #000000;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.chat-container {
+    width: 100%;
+    max-width: 935px;
+    height: 100vh;
+    background: #000000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid #262626;
+    border-right: 1px solid #262626;
+}
+
+.chat-header {
+    background: #000000;
+    color: #ffffff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #262626;
+}
+
+.chat-header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.online-users-header {
+    background: #000000;
+    padding: 12px 20px;
+    border-bottom: 1px solid #262626;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.online-users-header:hover {
+    background: #0a0a0a;
+}
+
+.online-count {
+    font-size: 14px;
+    color: #8e8e8e;
+}
+
+.online-users-toggle {
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.toggle-icon {
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+}
+
+.toggle-icon.active {
+    transform: rotate(180deg);
+}
+
+.online-users-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: #000000;
+    border-bottom: 1px solid #262626;
+}
+
+.online-users-panel.active {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.online-users-list {
+    padding: 16px 20px;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.user-item:last-child {
+    border-bottom: none;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-color {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 12px;
+    border: 2px solid #262626;
+}
+
+.user-name {
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.admin-badge {
+    background: #0095f6;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+.suspended-badge {
+    background: #ed4956;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.admin-controls button {
+    background: #262626;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.admin-controls .kick-button {
+    background: #ed4956;
+}
+
+.messages {
+    flex: 1;
+    padding: 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: #000000;
+}
+
+.message {
+    max-width: 70%;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+    border-radius: 22px;
+    font-size: 14px;
+    position: relative;
+}
+
+.user-message {
+    background: #0095f6;
+    color: white;
+    align-self: flex-end;
+}
+
+.other-message {
+    background: #262626;
+    color: #ffffff;
+    align-self: flex-start;
+}
+
+.system-message {
+    background: transparent;
+    color: #8e8e8e;
+    align-self: center;
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.admin-message {
+    background: rgba(237, 73, 86, 0.15);
+    color: #ed4956;
+    align-self: center;
+    font-size: 12px;
+}
+
+.message-info {
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.6;
+}
+
+.chat-input {
+    display: flex;
+    padding: 12px 20px;
+    background: #000000;
+    border-top: 1px solid #262626;
+    align-items: center;
+}
+
+#message-input {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid #262626;
+    border-radius: 22px;
+    outline: none;
+    font-size: 14px;
+    background: #000000;
+    color: #ffffff;
+    margin: 0 12px;
+}
+
+#message-input:focus {
+    border-color: #0095f6;
+}
+
+#send-button {
+    background: transparent;
+    color: #0095f6;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+#username-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #000000;
+    border: 1px solid #262626;
+    padding: 32px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border: 1px solid #262626;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #000000;
+    color: #ffffff;
+}
+
+.modal-content button {
+    background: #0095f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 24px;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+}
+/* 메시지 삭제/수정 버튼 */
+.message-actions {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    gap: 4px;
+}
+
+.message:hover .message-actions {
+    display: flex;
+}
+
+.action-btn {
+    background: #262626;
+    border: none;
+    color: #8e8e8e;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background: #363636;
+    color: #ffffff;
+}
+
+/* 이모지 전용 메시지 */
+.emoji-only-message {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    font-size: 48px;
+    line-height: 1;
+    animation: bounceIn 0.6s ease-out;
+    max-width: none !important;
+}
+
+.emoji-only-message .message-info {
+    font-size: 11px;
+    color: #8e8e8e;
+    margin-top: 8px;
+    text-align: center;
+    opacity: 0.7;
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 이모지 애니메이션 */
+.flying-emoji {
+    position: fixed;
+    font-size: 32px;
+    pointer-events: none;
+    z-index: 1000;
+    animation: flyAndFade 3s ease-out forwards;
+}
+
+@keyframes flyAndFade {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-200px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* 이모지 선택기 */
+.emoji-picker {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    background: #262626;
+    border: 1px solid #363636;
+    border-radius: 16px;
+    padding: 16px;
+    display: none;
+    z-index: 1000;
+    width: 300px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.emoji-picker.active {
+    display: block;
+}
+
+.emoji-category {
+    margin-bottom: 12px;
+}
+
+.emoji-category-title {
+    color: #8e8e8e;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+}
+
+.emoji-item {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.emoji-item:hover {
+    background: #363636;
+}
+
+#emoji-button {
+    background: transparent;
+    border: none;
+    color: #8e8e8e;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+}
+
+#emoji-button:hover {
+    color: #ffffff;
+}
+
+/* 게임 선택 모달 */
+.game-selection-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2500;
+}
+
+.game-selection-content {
+    background: #000000;
+    border: 2px solid #262626;
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.game-selection-content h2 {
+    color: #ffffff;
+    font-size: 24px;
+    margin-bottom: 30px;
+}
+
+.game-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.game-option {
+    background: #262626;
+    border: 2px solid #363636;
+    color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.game-option:hover {
+    background: #363636;
+    border-color: #0095f6;
+    transform: translateY(-2px);
+}
+
+.game-option-title {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.game-option-desc {
+    font-size: 12px;
+    color: #8e8e8e;
+    font-weight: normal;
+}
+
+.close-selection {
+    background: #ed4956;
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* 게임 컨테이너 */
+.game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+.game-area {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
+    border: 2px solid #262626;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.game-ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.game-score {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.game-close {
+    background: #ed4956;
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.game-lanes {
+    position: absolute;
+    top: 60px;
+    bottom: 60px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.game-lane {
+    width: 30%;
+    height: 100%;
+    border: 1px solid #262626;
+    border-radius: 8px;
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.player {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 30px;
+    background: #0095f6;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    transition: left 0.2s ease;
+    z-index: 5;
+}
+
+.obstacle {
+    position: absolute;
+    width: 80%;
+    height: 40px;
+    background: linear-gradient(135deg, #ed4956, #c13547);
+    border-radius: 8px;
+    left: 10%;
+    border: 2px solid #ff6b6b;
+    animation: moveDown linear;
+}
+
+@keyframes moveDown {
+    from {
+        top: -50px;
+    }
+    to {
+        top: 100%;
+    }
+}
+
+.game-instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    text-align: center;
+    color: #8e8e8e;
+    font-size: 12px;
+}
+
+.lane-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #8e8e8e;
+    font-size: 12px;
+    opacity: 0.5;
+}
+
+/* PvP 게임 스타일 */
+.pvp-game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+.pvp-game-area {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+    border: 3px solid #262626;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.pvp-ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.player-health {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.health-bar {
+    width: 100px;
+    height: 8px;
+    background: #262626;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.health-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #ffaa44, #44ff44);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.pvp-close {
+    background: #ed4956;
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.pvp-battlefield {
+    position: absolute;
+    top: 60px;
+    bottom: 60px;
+    left: 20px;
+    right: 20px;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(38, 38, 38, 0.1),
+        rgba(38, 38, 38, 0.1) 20px,
+        transparent 20px,
+        transparent 40px
+    );
+    border: 1px solid #262626;
+    border-radius: 8px;
+}
+
+.pvp-player {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    transition: all 0.1s ease;
+    z-index: 5;
+}
+
+.pvp-player.player1 {
+    background: #0095f6;
+}
+
+.pvp-player.player2 {
+    background: #ed4956;
+}
+
+.pvp-player::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 12px solid currentColor;
+    transition: transform 0.1s ease;
+}
+
+.pvp-player.facing-right::before {
+    transform: translateX(-50%) rotate(90deg);
+}
+
+.pvp-player.facing-down::before {
+    transform: translateX(-50%) rotate(180deg);
+}
+
+.pvp-player.facing-left::before {
+    transform: translateX(-50%) rotate(270deg);
+}
+
+.bullet {
+    position: absolute;
+    width: 4px;
+    height: 8px;
+    background: #ffff00;
+    border-radius: 2px;
+    z-index: 3;
+}
+
+.pvp-instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    text-align: center;
+    color: #8e8e8e;
+    font-size: 12px;
+}
+
+.waiting-for-opponent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #ffffff;
+    font-size: 18px;
+}
+
+.countdown {
+    font-size: 48px;
+    color: #ffff00;
+    margin-bottom: 20px;
+}
+
+.game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.game-over-text {
+    font-size: 36px;
+    color: #ffffff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.game-over-winner {
+    color: #44ff44;
+}
+
+.game-over-loser {
+    color: #ff4444;
+}
+
+/* 수정 모드 */
+.editing-message {
+    background: rgba(0, 149, 246, 0.1) !important;
+    border: 1px solid #0095f6 !important;
+}
+
+.edit-input {
+    background: #000000;
+    border: 1px solid #0095f6;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 12px;
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.edit-save, .edit-cancel {
+    background: #262626;
+    border: none;
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.edit-save {
+    background: #0095f6;
+}
+
+.edit-save:hover {
+    background: #1877f2;
+}
+
+.edit-cancel:hover {
+    background: #363636;
+}
+
+.deleted-message {
+    opacity: 0.5;
+    font-style: italic;
+    color: #8e8e8e !important;
+}
+
+/* 이미지 메시지 스타일 */
+.image-message {
+    max-width: 300px;
+    border-radius: 12px;
+    margin: 4px 0;
+}
+
+.image-message img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.image-message img:hover {
+    transform: scale(1.02);
+}
+
+.image-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    cursor: pointer;
+}
+
+.image-overlay img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 12px;
+}
+
+.paste-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #262626;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    z-index: 1500;
+    display: none;
+    font-size: 14px;
+    border: 1px solid #363636;
+}
+   </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>세륜 채팅방</h1>
+        </div>
+        <div class="online-users-header" id="users-toggle">
+            <div class="online-count">온라인: <span id="user-count">0</span>명</div>
+            <div class="online-users-toggle">
+                사용자 목록 <span class="toggle-icon">▼</span>
+            </div>
+        </div>
+        <div class="online-users-panel" id="users-panel">
+            <div class="online-users-list" id="users-list">
+                <!-- 사용자 목록 -->
+            </div>
+        </div>
+        <div class="messages" id="messages">
+            <!-- 메시지 -->
+        </div>
+        <div class="chat-input">
+            <button id="emoji-button">😀</button>
+            <input type="text" id="message-input" placeholder="메시지 보내기...">
+            <button id="send-button">전송</button>
+            <button id="game-button" style="background: transparent; border: none; color: #0095f6; margin-left: 8px; cursor: pointer; font-size: 16px;">🎮</button>
+        </div>
+        
+        <!-- 이모지 선택기 -->
+        <div id="emoji-picker" class="emoji-picker">
+            <div class="emoji-category">
+                <div class="emoji-category-title">자주 사용</div>
+                <div class="emoji-grid">
+                    <button class="emoji-item">😀</button>
+                    <button class="emoji-item">😂</button>
+                    <button class="emoji-item">😭</button>
+                    <button class="emoji-item">❤️</button>
+                    <button class="emoji-item">👍</button>
+                    <button class="emoji-item">👎</button>
+                    <button class="emoji-item">🔥</button>
+                    <button class="emoji-item">💯</button>
+                </div>
+            </div>
+            <div class="emoji-category">
+                <div class="emoji-category-title">표정</div>
+                <div class="emoji-grid">
+                    <button class="emoji-item">😊</button>
+                    <button class="emoji-item">😉</button>
+                    <button class="emoji-item">😎</button>
+                    <button class="emoji-item">🤔</button>
+                    <button class="emoji-item">😴</button>
+                    <button class="emoji-item">🤯</button>
+                    <button class="emoji-item">😱</button>
+                    <button class="emoji-item">🥳</button>
+                </div>
+            </div>
+            <div class="emoji-category">
+                <div class="emoji-category-title">기타</div>
+                <div class="emoji-grid">
+                    <button class="emoji-item">✨</button>
+                    <button class="emoji-item">💥</button>
+                    <button class="emoji-item">💫</button>
+                    <button class="emoji-item">🎉</button>
+                    <button class="emoji-item">🎊</button>
+                    <button class="emoji-item">💝</button>
+                    <button class="emoji-item">🌟</button>
+                    <button class="emoji-item">⚡</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 게임 선택 모달 -->
+    <div id="game-selection-modal" class="game-selection-modal">
+        <div class="game-selection-content">
+            <button class="close-selection" id="close-game-selection">✕</button>
+            <h2>게임 선택</h2>
+            <div class="game-options">
+                <div class="game-option" id="racing-game-option">
+                    <div class="game-option-title">🏁 레이싱 게임</div>
+                    <div class="game-option-desc">혼자서 장애물을 피하며 점수를 얻는 게임</div>
+                </div>
+                <div class="game-option" id="pvp-game-option">
+                    <div class="game-option-title">⚔️ 1대1 PvP</div>
+                    <div class="game-option-desc">다른 플레이어와 대결하는 슈팅 게임</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 기존 레이싱 게임 컨테이너 -->
+    <div id="game-container" class="game-container">
+        <div class="game-area" id="game-area">
+            <div class="game-ui">
+                <div class="game-score">점수: <span id="game-score">0</span></div>
+                <button class="game-close" id="game-close">✕</button>
+            </div>
+            <div class="game-lanes">
+                <div class="game-lane" id="lane-0">
+                    <div class="lane-indicator">1</div>
+                </div>
+                <div class="game-lane" id="lane-1">
+                    <div class="lane-indicator">2</div>
+                </div>
+                <div class="game-lane" id="lane-2">
+                    <div class="lane-indicator">3</div>
+                </div>
+            </div>
+            <div class="player" id="player"></div>
+            <div class="game-instructions">
+                ← → 방향키로 이동! 장애물을 피하세요
+            </div>
+        </div>
+    </div>
+    
+    <!-- PvP 게임 컨테이너 -->
+    <div id="pvp-game-container" class="pvp-game-container">
+        <div class="pvp-game-area" id="pvp-game-area">
+            <div class="pvp-ui">
+                <div class="player-health">
+                    <span id="player1-name">플레이어1</span>
+                    <div class="health-bar">
+                        <div class="health-fill" id="player1-health" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <button class="pvp-close" id="pvp-close">✕</button>
+                <div class="player-health">
+                    <div class="health-bar">
+                        <div class="health-fill" id="player2-health" style="width: 100%;"></div>
+                    </div>
+                    <span id="player2-name">플레이어2</span>
+                </div>
+            </div>
+            <div class="pvp-battlefield" id="pvp-battlefield">
+                <div class="waiting-for-opponent" id="waiting-message">
+                    <div>상대방을 기다리는 중...</div>
+                </div>
+                <div class="pvp-player player1" id="pvp-player1" style="display: none;"></div>
+                <div class="pvp-player player2" id="pvp-player2" style="display: none;"></div>
+            </div>
+            <div class="pvp-instructions">
+                WASD로 이동, 스페이스바로 총알 발사! 3번 맞히면 승리!
+            </div>
+            <div class="game-over-screen" id="game-over-screen">
+                <div class="game-over-text" id="game-over-text"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 이미지 오버레이 -->
+    <div id="image-overlay" class="image-overlay">
+        <img id="overlay-image" src="" alt="확대 이미지">
+    </div>
+    
+    <!-- 붙여넣기 인디케이터 -->
+    <div id="paste-indicator" class="paste-indicator">
+        이미지를 업로드하는 중...
+    </div>
+    
+    <div id="username-modal">
+        <div class="modal-content">
+            <h2>채팅에 참여하기</h2>
+            <input type="text" id="username-input" placeholder="사용자 이름">
+            <button id="username-submit">시작하기</button>
+        </div>
+    </div>
+    
+    <!-- JavaScript 파일 링크 -->
+    <script src="/script.js"></script>
+</body>
+</html>
