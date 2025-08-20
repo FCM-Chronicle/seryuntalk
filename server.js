@@ -464,6 +464,8 @@ io.on('connection', (socket) => {
 
   // PvP 대전 신청 수락
   socket.on('acceptPvPRequest', () => {
+    console.log('PvP 대전 신청 수락 요청 받음:', socket.id);
+    
     // 현재 사용자에게 온 대전 신청 찾기
     let request = null;
     let requestId = null;
@@ -476,7 +478,10 @@ io.on('connection', (socket) => {
       }
     }
     
+    console.log('찾은 대전 신청:', request);
+    
     if (!request) {
+      console.log('대전 신청을 찾을 수 없음');
       socket.emit('pvpGameError', { message: '대전 신청을 찾을 수 없습니다.' });
       return;
     }
@@ -488,7 +493,13 @@ io.on('connection', (socket) => {
     const challengerUser = activeUsers[request.challengerId];
     const targetUser = activeUsers[request.targetId];
     
+    console.log('게임 생성 중:', {
+      challenger: challengerUser?.username,
+      target: targetUser?.username
+    });
+    
     if (!challengerUser || !targetUser) {
+      console.log('사용자 정보 없음');
       socket.emit('pvpGameError', { message: '상대방과의 연결이 끊어졌습니다.' });
       return;
     }
@@ -502,19 +513,25 @@ io.on('connection', (socket) => {
     console.log(`PvP 게임 생성: ${game.id}, 플레이어: ${challengerUser.username} vs ${targetUser.username}`);
     
     // 양쪽 플레이어에게 게임 시작 알림
-    io.to(request.challengerId).emit('pvpGameCreated', {
+    const gameDataForChallenger = {
       gameId: game.id,
       isPlayer1: true,
       player1: { username: challengerUser.username },
       player2: { username: targetUser.username }
-    });
+    };
     
-    io.to(request.targetId).emit('pvpGameAccepted', {
+    const gameDataForTarget = {
       gameId: game.id,
       isPlayer1: false,
       player1: { username: challengerUser.username },
       player2: { username: targetUser.username }
-    });
+    };
+    
+    console.log('신청자에게 게임 생성 알림 전송:', gameDataForChallenger);
+    io.to(request.challengerId).emit('pvpGameCreated', gameDataForChallenger);
+    
+    console.log('수락자에게 게임 수락 알림 전송:', gameDataForTarget);
+    io.to(request.targetId).emit('pvpGameAccepted', gameDataForTarget);
   });
 
   // PvP 대전 신청 거절
