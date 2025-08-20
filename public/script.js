@@ -496,6 +496,7 @@ function endRacingGame() {
 
 // PvP 게임 요청 (사용자 선택 방식)
 function requestPvPGame() {
+    console.log('PvP 게임 요청 시작');
     hideGameSelection();
     
     // 온라인 사용자 목록 표시 (자신 제외)
@@ -505,6 +506,8 @@ function requestPvPGame() {
             availableUsers.push(onlineUsers[userId]);
         }
     }
+    
+    console.log('사용 가능한 사용자들:', availableUsers);
     
     if (availableUsers.length === 0) {
         alert('대전할 수 있는 다른 사용자가 없습니다.');
@@ -522,17 +525,30 @@ function requestPvPGame() {
     
     if (choiceNum && choiceNum >= 1 && choiceNum <= availableUsers.length) {
         const targetUser = availableUsers[choiceNum - 1];
+        console.log('대전 신청 보내는 중:', targetUser.username);
         socket.emit('sendPvPRequest', { targetUsername: targetUser.username });
         alert(`${targetUser.username}님에게 대전 신청을 보냈습니다. 응답을 기다려주세요.`);
+    } else {
+        console.log('잘못된 선택:', choice);
     }
 }
 
 // PvP 게임 초기화
 function initPvPGame(gameData) {
+    console.log('PvP 게임 초기화 시작:', gameData);
+    
     pvpGameActive = true;
     pvpGameId = gameData.gameId;
     isPlayer1 = gameData.isPlayer1;
     gameStarted = false;
+    
+    console.log('게임 설정:', {
+        pvpGameActive,
+        pvpGameId,
+        isPlayer1,
+        player1: gameData.player1.username,
+        player2: gameData.player2.username
+    });
     
     // UI 업데이트
     document.getElementById('player1-name').textContent = gameData.player1.username;
@@ -548,6 +564,12 @@ function initPvPGame(gameData) {
     pvpPlayer1 = document.getElementById('pvp-player1');
     pvpPlayer2 = document.getElementById('pvp-player2');
     
+    console.log('DOM 요소들:', {
+        pvpBattlefield: !!pvpBattlefield,
+        pvpPlayer1: !!pvpPlayer1,
+        pvpPlayer2: !!pvpPlayer2
+    });
+    
     // 대기 메시지 숨기기
     document.getElementById('waiting-message').style.display = 'none';
     
@@ -559,15 +581,28 @@ function initPvPGame(gameData) {
     if (isPlayer1) {
         myPosition = { x: 100, y: 100 };
         opponentPosition = { x: 600, y: 400 };
+        myDirection = 'up';
+        opponentDirection = 'up';
     } else {
         myPosition = { x: 600, y: 400 };
         opponentPosition = { x: 100, y: 100 };
+        myDirection = 'up';
+        opponentDirection = 'up';
     }
+    
+    console.log('초기 위치 설정:', {
+        myPosition,
+        opponentPosition,
+        myDirection,
+        opponentDirection
+    });
     
     updatePvPPlayerPositions();
     
     // 카운트다운 시작
     startCountdown();
+    
+    console.log('PvP 게임 초기화 완료');
 }
 
 // 카운트다운 시작
@@ -894,11 +929,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // PvP 대전 신청 관련
     document.getElementById('pvp-accept').addEventListener('click', () => {
+        console.log('PvP 대전 수락 버튼 클릭됨');
         socket.emit('acceptPvPRequest');
         document.getElementById('pvp-request-modal').style.display = 'none';
     });
     
     document.getElementById('pvp-decline').addEventListener('click', () => {
+        console.log('PvP 대전 거절 버튼 클릭됨');
         socket.emit('declinePvPRequest');
         document.getElementById('pvp-request-modal').style.display = 'none';
     });
@@ -1149,9 +1186,9 @@ socket.on('pvpRequestReceived', (data) => {
     document.getElementById('pvp-request-modal').style.display = 'flex';
 });
 
-socket.on('pvpRequestAccepted', (gameData) => {
-    console.log('PvP 대전 신청 수락됨:', gameData);
-    initPvPGame(gameData);
+socket.on('pvpRequestAccepted', (data) => {
+    console.log('PvP 대전 신청 수락됨:', data);
+    alert(`${data.targetName}님이 대전 신청을 수락했습니다!`);
 });
 
 socket.on('pvpRequestDeclined', (data) => {
@@ -1161,11 +1198,22 @@ socket.on('pvpRequestDeclined', (data) => {
 
 socket.on('pvpGameCreated', (gameData) => {
     console.log('PvP 게임 생성됨:', gameData);
+    // PvP 게임 화면 표시
+    document.getElementById('pvp-game-container').style.display = 'flex';
+    initPvPGame(gameData);
+});
+
+socket.on('pvpGameAccepted', (gameData) => {
+    console.log('PvP 게임 수락됨:', gameData);
+    // PvP 게임 화면 표시
+    document.getElementById('pvp-game-container').style.display = 'flex';
     initPvPGame(gameData);
 });
 
 socket.on('pvpGameJoined', (gameData) => {
     console.log('PvP 게임 참가됨:', gameData);
+    // PvP 게임 화면 표시
+    document.getElementById('pvp-game-container').style.display = 'flex';
     initPvPGame(gameData);
 });
 
