@@ -416,7 +416,7 @@ function sendMessage() {
     }
 }
 
-// 사용자 목록 업데이트
+// 사용자 목록 업데이트 (관리자 기능 추가)
 function updateOnlineUsersList() {
     const usersListElement = document.getElementById('users-list');
     usersListElement.innerHTML = '';
@@ -425,15 +425,31 @@ function updateOnlineUsersList() {
         const user = onlineUsers[userId];
         const userElement = document.createElement('div');
         userElement.classList.add('user-item');
-        userElement.innerHTML = `
+        
+        // 사용자 정보 부분
+        const userInfoHtml = `
             <div class="user-info">
                 <div class="user-color" style="background-color: ${user.color}"></div>
                 <div class="user-name">
                     ${user.username}${user.id === socket.id ? ' (나)' : ''}
                     ${user.isAdmin ? '<span class="admin-badge">관리자</span>' : ''}
+                    ${user.isSuspended ? '<span class="suspended-badge">정지됨</span>' : ''}
                 </div>
             </div>
         `;
+        
+        // 관리자이고 자신이 아닌 경우 관리 버튼 추가
+        let adminControlsHtml = '';
+        if (isAdmin && user.id !== socket.id) {
+            adminControlsHtml = `
+                <div class="admin-controls">
+                    <button class="suspend-button" onclick="showSuspendModal('${user.username}')" title="정지">⏸️</button>
+                    <button class="kick-button" onclick="kickUser('${user.username}')" title="강퇴">🚫</button>
+                </div>
+            `;
+        }
+        
+        userElement.innerHTML = userInfoHtml + adminControlsHtml;
         usersListElement.appendChild(userElement);
     }
 }
