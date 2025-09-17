@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>영어 학습</title>
+   <title>실시간 채팅</title>
    <!-- Socket.IO 클라이언트 라이브러리 추가 -->
    <script src="/socket.io/socket.io.js"></script>
    <style>
@@ -166,10 +166,27 @@ body {
     padding: 4px 8px;
     font-size: 11px;
     cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.admin-controls button:hover {
+    background: #363636;
+}
+
+.admin-controls .suspend-button {
+    background: #ff8c00;
+}
+
+.admin-controls .suspend-button:hover {
+    background: #ff9500;
 }
 
 .admin-controls .kick-button {
     background: #ed4956;
+}
+
+.admin-controls .kick-button:hover {
+    background: #ff5566;
 }
 
 .messages {
@@ -306,6 +323,7 @@ body {
     cursor: pointer;
     width: 100%;
 }
+
 /* 메시지 삭제/수정 버튼 */
 .message-actions {
     position: absolute;
@@ -936,6 +954,7 @@ body {
 .pvp-decline-btn:hover {
     background: #cc0000;
 }
+
 .editing-message {
     background: rgba(0, 149, 246, 0.1) !important;
     border: 1px solid #0095f6 !important;
@@ -1039,6 +1058,100 @@ body {
     display: none;
     font-size: 14px;
     border: 1px solid #363636;
+}
+
+/* 정지 모달 스타일 */
+.suspend-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.suspend-modal-content {
+    background: #000000;
+    border: 2px solid #262626;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.suspend-modal-content h3 {
+    color: #ffffff;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.suspend-target {
+    color: #ff8c00;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.suspend-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.suspend-option {
+    background: #262626;
+    border: 2px solid #363636;
+    color: #ffffff;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.suspend-option:hover {
+    background: #363636;
+    border-color: #ff8c00;
+}
+
+.suspend-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.suspend-confirm, .suspend-cancel {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.suspend-confirm {
+    background: #ff8c00;
+    color: white;
+}
+
+.suspend-confirm:hover {
+    background: #ff9500;
+}
+
+.suspend-cancel {
+    background: #666666;
+    color: white;
+}
+
+.suspend-cancel:hover {
+    background: #777777;
 }
    </style>
 </head>
