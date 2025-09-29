@@ -97,63 +97,68 @@ class PvPGame {
   }
 
   // 총알 발사
-  shootBullet(playerId, position, direction) {
-    if (this.gameEnded) return;
-    
-    const bullet = {
-      id: `bullet_${Date.now()}_${Math.random()}`,
-      playerId: playerId,
-      position: { x: position.x + 15, y: position.y + 15 },
-      direction: direction,
-      speed: 5
-    };
-    
-    this.bullets.push(bullet);
-    
-    // 총알 이동 시뮬레이션 (서버에서 충돌 검사)
-    this.moveBullet(bullet);
-  }
+shootBullet(playerId, position, direction) {
+  if (this.gameEnded) return;
+  
+  const bullet = {
+    id: `bullet_${Date.now()}_${Math.random()}`,
+    playerId: playerId,
+    position: { x: position.x + 15, y: position.y + 15 },
+    direction: direction,
+    speed: 5
+  };
+  
+  this.bullets.push(bullet);
+  
+  // 총알 이동 시뮬레이션 (서버에서 충돌 검사)
+  this.moveBullet(bullet);
+}
 
-  // 총알 이동 및 충돌 검사
-  moveBullet(bullet) {
-    const moveInterval = setInterval(() => {
-      if (this.gameEnded) {
-        clearInterval(moveInterval);
-        return;
-      }
-      
-      // 총알 이동 (대각선 지원)
-      const directions = bullet.direction.split('-');
-      const speed = bullet.speed;
-      
-      directions.forEach(dir => {
-        switch (dir) {
-          case 'up': bullet.position.y -= speed; break;
-          case 'down': bullet.position.y += speed; break;
-          case 'left': bullet.position.x -= speed; break;
-          case 'right': bullet.position.x += speed; break;
-        }
-      });
-      
-      // 경계 체크
-      if (bullet.position.x < 0 || bullet.position.x > 760 || 
-          bullet.position.y < 0 || bullet.position.y > 520) {
-        this.removeBullet(bullet.id);
-        clearInterval(moveInterval);
-        return;
-      }
-      
-      // 충돌 검사
-      this.checkBulletCollisions(bullet);
-      
-    }, 16); // 60fps
+// 총알 이동 및 충돌 검사
+moveBullet(bullet) {
+  const moveInterval = setInterval(() => {
+    if (this.gameEnded) {
+      clearInterval(moveInterval);
+      return;
+    }
     
-    // 3초 후 총알 제거 (범위 감소)
-    setTimeout(() => {
+    // 총알 이동 (대각선 지원)
+    const directions = bullet.direction.split('-');
+    const speed = bullet.speed;
+    
+    directions.forEach(dir => {
+      switch (dir) {
+        case 'up': bullet.position.y -= speed; break;
+        case 'down': bullet.position.y += speed; break;
+        case 'left': bullet.position.x -= speed; break;
+        case 'right': bullet.position.x += speed; break;
+      }
+    });
+    
+    // 경계 체크
+    if (bullet.position.x < 0 || bullet.position.x > 760 || 
+        bullet.position.y < 0 || bullet.position.y > 520) {
       this.removeBullet(bullet.id);
       clearInterval(moveInterval);
-    }, 3000);
-  }
+      return;
+    }
+    
+    // 충돌 검사
+    this.checkBulletCollisions(bullet);
+    
+  }, 16); // 60fps
+  
+  // 3초 후 총알 제거
+  setTimeout(() => {
+    this.removeBullet(bullet.id);
+    clearInterval(moveInterval);
+  }, 3000);
+}
+
+// 총알 제거
+removeBullet(bulletId) {
+  this.bullets = this.bullets.filter(b => b.id !== bulletId);
+}
 
   // 총알과 플레이어 충돌 검사
   checkBulletCollisions(bullet) {
