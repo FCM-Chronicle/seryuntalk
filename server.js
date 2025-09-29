@@ -166,6 +166,8 @@ class PvPGame {
       Math.pow(bullet.position.x - (targetPlayer.position.x + 15), 2) +
       Math.pow(bullet.position.y - (targetPlayer.position.y + 15), 2)
     );
+
+     console.log(`[충돌 검사] 총알 위치: (${bullet.position.x}, ${bullet.position.y}), 타겟 위치: (${targetPlayer.position.x}, ${targetPlayer.position.y}), 거리: ${distance.toFixed(2)}, 반경: ${hitRadius}`);
     
     if (distance < hitRadius) {
       // 충돌 발생!
@@ -173,6 +175,9 @@ class PvPGame {
       this.removeBullet(bullet.id);
       
       console.log(`플레이어 피격! ${targetPlayer.username} 체력: ${targetPlayer.health}`);
+      console.log(`[충돌 발생!] 게임 ID: ${this.id}`);
+      console.log(`[충돌 전] ${targetPlayer.username} 체력: ${targetPlayer.health}`);
+
       
       // 피격 이벤트 전송
       io.to(this.player1.id).emit('pvpPlayerHit', {
@@ -186,10 +191,13 @@ class PvPGame {
         health: targetPlayer.health,
         winner: targetPlayer.health <= 0 ? (targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username) : null
       });
+
+      console.log(`[이벤트 전송] pvpPlayerHit:`, hitData);
       
       // 게임 종료 체크
       if (targetPlayer.health <= 0) {
         this.endGame(targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username);
+        console.log(`[게임 종료 호출] 승자: ${winner}`);
       }
     }
   }
