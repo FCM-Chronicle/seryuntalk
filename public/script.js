@@ -680,7 +680,14 @@ function updateHealthBars() {
 
 // 총알 발사
 function shootBullet() {
-    if (!gameStarted || !pvpGameActive) return;
+    console.log('[총알 발사 시도] gameStarted:', gameStarted, 'pvpGameActive:', pvpGameActive);
+    
+    if (!gameStarted || !pvpGameActive) {
+        console.log('[총알 발사 실패] 게임 상태가 올바르지 않음');
+        return;
+    }
+    
+    console.log('[총알 발사 성공] gameId:', pvpGameId, 'position:', myPosition, 'direction:', myDirection);
     
     socket.emit('pvpShoot', {
         gameId: pvpGameId,
@@ -693,11 +700,11 @@ function shootBullet() {
 function createBullet(position, direction, isMyBullet = false) {
     const bullet = document.createElement('div');
     bullet.classList.add('bullet');
-    bullet.style.left = position.x + 15 + 'px'; // 플레이어 중앙에서 시작
+    bullet.style.left = position.x + 15 + 'px';
     bullet.style.top = position.y + 15 + 'px';
     
     if (isMyBullet) {
-        bullet.style.background = '#00ff00'; // 내 총알은 초록색
+        bullet.style.background = '#00ff00';
     }
     
     pvpBattlefield.appendChild(bullet);
@@ -736,7 +743,7 @@ function createBullet(position, direction, isMyBullet = false) {
         if (bullet.parentNode) {
             bullet.remove();
         }
-    }, 5000);
+    }, 3000);
 }
 
 // PvP 게임 종료
