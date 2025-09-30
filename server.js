@@ -162,7 +162,12 @@ removeBullet(bulletId) {
 
   // 총알과 플레이어 충돌 검사
 checkBulletCollisions(bullet) {
-  const hitRadius = 25;
+  const hitRadius = 15; // 25에서 15로 줄임
+  
+  // 이미 충돌 처리된 총알은 무시
+  if (bullet.hasHit) {
+    return;
+  }
   
   const targetPlayer = bullet.playerId === this.player1.id ? this.player2 : this.player1;
   
@@ -171,9 +176,11 @@ checkBulletCollisions(bullet) {
     Math.pow(bullet.position.y - (targetPlayer.position.y + 15), 2)
   );
   
-  console.log(`[충돌 검사] 총알 위치: (${bullet.position.x}, ${bullet.position.y}), 타겟 위치: (${targetPlayer.position.x}, ${targetPlayer.position.y}), 거리: ${distance.toFixed(2)}, 반경: ${hitRadius}`);
+  console.log(`[충돌 검사] 거리: ${distance.toFixed(2)}, 반경: ${hitRadius}`);
   
   if (distance < hitRadius) {
+    bullet.hasHit = true; // 충돌 플래그 설정 (중요!)
+    
     console.log(`[충돌 발생!] 게임 ID: ${this.id}`);
     console.log(`[충돌 전] ${targetPlayer.username} 체력: ${targetPlayer.health}`);
     
