@@ -161,51 +161,47 @@ removeBullet(bulletId) {
 }
 
   // 총알과 플레이어 충돌 검사
-  checkBulletCollisions(bullet) {
-    const hitRadius = 25; // 충돌 반경 증가
+checkBulletCollisions(bullet) {
+  const hitRadius = 25;
+  
+  const targetPlayer = bullet.playerId === this.player1.id ? this.player2 : this.player1;
+  
+  const distance = Math.sqrt(
+    Math.pow(bullet.position.x - (targetPlayer.position.x + 15), 2) +
+    Math.pow(bullet.position.y - (targetPlayer.position.y + 15), 2)
+  );
+  
+  console.log(`[충돌 검사] 총알 위치: (${bullet.position.x}, ${bullet.position.y}), 타겟 위치: (${targetPlayer.position.x}, ${targetPlayer.position.y}), 거리: ${distance.toFixed(2)}, 반경: ${hitRadius}`);
+  
+  if (distance < hitRadius) {
+    console.log(`[충돌 발생!] 게임 ID: ${this.id}`);
+    console.log(`[충돌 전] ${targetPlayer.username} 체력: ${targetPlayer.health}`);
     
-    // 자신의 총알로는 자신을 맞힐 수 없음
-    const targetPlayer = bullet.playerId === this.player1.id ? this.player2 : this.player1;
+    targetPlayer.health--;
+    this.removeBullet(bullet.id);
     
-    const distance = Math.sqrt(
-      Math.pow(bullet.position.x - (targetPlayer.position.x + 15), 2) +
-      Math.pow(bullet.position.y - (targetPlayer.position.y + 15), 2)
-    );
-
-     console.log(`[충돌 검사] 총알 위치: (${bullet.position.x}, ${bullet.position.y}), 타겟 위치: (${targetPlayer.position.x}, ${targetPlayer.position.y}), 거리: ${distance.toFixed(2)}, 반경: ${hitRadius}`);
+    console.log(`[충돌 후] ${targetPlayer.username} 체력: ${targetPlayer.health}`);
     
-    if (distance < hitRadius) {
-      // 충돌 발생!
-      targetPlayer.health--;
-      this.removeBullet(bullet.id);
-      
-      console.log(`플레이어 피격! ${targetPlayer.username} 체력: ${targetPlayer.health}`);
-      console.log(`[충돌 발생!] 게임 ID: ${this.id}`);
-      console.log(`[충돌 전] ${targetPlayer.username} 체력: ${targetPlayer.health}`);
-
-      
-      // 피격 이벤트 전송
-      io.to(this.player1.id).emit('pvpPlayerHit', {
-        isPlayer1: targetPlayer.id === this.player1.id,
-        health: targetPlayer.health,
-        winner: targetPlayer.health <= 0 ? (targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username) : null
-      });
-      
-      io.to(this.player2.id).emit('pvpPlayerHit', {
-        isPlayer1: targetPlayer.id === this.player1.id,
-        health: targetPlayer.health,
-        winner: targetPlayer.health <= 0 ? (targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username) : null
-      });
-
-      console.log(`[이벤트 전송] pvpPlayerHit:`, hitData);
-      
-      // 게임 종료 체크
-      if (targetPlayer.health <= 0) {
-        this.endGame(targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username);
-        console.log(`[게임 종료 호출] 승자: ${winner}`);
-      }
+    const winner = targetPlayer.health <= 0 ? (targetPlayer.id === this.player1.id ? this.player2.username : this.player1.username) : null;
+    console.log(`[승자 계산] winner: ${winner}, targetPlayer.health: ${targetPlayer.health}`);
+    
+    const hitData = {
+      isPlayer1: targetPlayer.id === this.player1.id,
+      health: targetPlayer.health,
+      winner: winner
+    };
+    
+    console.log(`[이벤트 전송] pvpPlayerHit:`, hitData);
+    
+    io.to(this.player1.id).emit('pvpPlayerHit', hitData);
+    io.to(this.player2.id).emit('pvpPlayerHit', hitData);
+    
+    if (targetPlayer.health <= 0) {
+      console.log(`[게임 종료 호출] 승자: ${winner}`);
+      this.endGame(winner);
     }
   }
+}
 
   // 총알 제거
   removeBullet(bulletId) {
@@ -610,29 +606,35 @@ io.on('connection', (socket) => {
   });
 
   // PvP 총알 발사
-  socket.on('pvpShoot', (data) => {
-    const game = pvpGames[data.gameId];
+socket.on('pvpShoot', (data) => {
+  const game = pvpGames[data.gameId];
+  
+  console.log(`[서버] pvpShoot 이벤트 수신 - gameId: ${data.gameId}, playerId: ${socket.id}`);
+  console.log(`[서버] 게임 존재 여부: ${!!game}, 게임 종료 여부: ${game?.gameEnded}`);
+  
+  if (game && !game.gameEnded) {
+    console.log(`[서버] 총알 발사 처리 중 - position:`, data.position, `direction: ${data.direction}`);
     
-    if (game && !game.gameEnded) {
-      console.log(`플레이어 ${socket.id}가 총알 발사`);
-      
-      // 양쪽 플레이어에게 총알 발사 알림
-      io.to(game.player1.id).emit('pvpPlayerShoot', {
-        playerId: socket.id,
-        position: data.position,
-        direction: data.direction
-      });
-      
-      io.to(game.player2.id).emit('pvpPlayerShoot', {
-        playerId: socket.id,
-        position: data.position,
-        direction: data.direction
-      });
-      
-      // 서버에서 총알 처리
-      game.shootBullet(socket.id, data.position, data.direction);
-    }
-  });
+    io.to(game.player1.id).emit('pvpPlayerShoot', {
+      playerId: socket.id,
+      position: data.position,
+      direction: data.direction
+    });
+    
+    io.to(game.player2.id).emit('pvpPlayerShoot', {
+      playerId: socket.id,
+      position: data.position,
+      direction: data.direction
+    });
+    
+    console.log(`[서버] pvpPlayerShoot 이벤트 전송 완료`);
+    
+    game.shootBullet(socket.id, data.position, data.direction);
+    console.log(`[서버] 총알 생성 완료, 현재 총알 수: ${game.bullets.length}`);
+  } else {
+    console.log(`[서버] 총알 발사 실패 - 게임 없음 또는 종료됨`);
+  }
+});
   
   // 연결 해제 처리
   socket.on('disconnect', () => {
