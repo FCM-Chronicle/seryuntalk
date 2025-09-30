@@ -738,7 +738,7 @@ function createBullet(position, direction, isMyBullet = false) {
     
     moveBullet();
     
-    // 5초 후 자동 제거
+    // 3초 후 자동 제거 (5초에서 3초로 변경)
     setTimeout(() => {
         if (bullet.parentNode) {
             bullet.remove();
