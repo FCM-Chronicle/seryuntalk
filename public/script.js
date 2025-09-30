@@ -1249,12 +1249,15 @@ socket.on('pvpPlayerMove', (data) => {
 });
 
 socket.on('pvpPlayerShoot', (data) => {
-    console.log('상대방 총알 발사:', data);
+    console.log('[클라이언트] pvpPlayerShoot 이벤트 수신:', data);
+    console.log('[클라이언트] 총알 생성 - playerId:', data.playerId, 'socket.id:', socket.id, '내 총알:', data.playerId === socket.id);
     createBullet(data.position, data.direction, data.playerId === socket.id);
 });
 
 socket.on('pvpPlayerHit', (data) => {
-    console.log('플레이어 피격:', data);
+    console.log('[클라이언트] pvpPlayerHit 이벤트 수신:', data);
+    console.log(`[클라이언트] isPlayer1: ${data.isPlayer1}, health: ${data.health}, winner: ${data.winner}`);
+    console.log(`[클라이언트] 이벤트 처리 전 - gameStarted: ${gameStarted}, pvpGameActive: ${pvpGameActive}`);
     
     if (data.isPlayer1) {
         player1Health = data.health;
@@ -1262,14 +1265,18 @@ socket.on('pvpPlayerHit', (data) => {
         player2Health = data.health;
     }
     
+    console.log(`[클라이언트] 체력바 업데이트 전 - player1Health: ${player1Health}, player2Health: ${player2Health}`);
     updateHealthBars();
     
     // 체력이 0이 되면 게임 종료
     if (data.health <= 0) {
+        console.log(`[클라이언트] 게임 종료 조건 충족! health: ${data.health}, winner: ${data.winner}`);
         endPvPGame(data.winner);
+    } else {
+        console.log(`[클라이언트] 게임 계속 진행 - 남은 체력: ${data.health}`);
+        console.log(`[클라이언트] 이벤트 처리 후 - gameStarted: ${gameStarted}, pvpGameActive: ${pvpGameActive}`);
     }
 });
-
 socket.on('pvpGameEnded', (data) => {
     console.log('PvP 게임 종료:', data);
     endPvPGame(data.winner);
