@@ -39,6 +39,9 @@ let pvpKeys = {};
 let gameStarted = false;
 let countdownActive = false;
 let lastMoveTime = 0;
+let lastBlinkTime = 0;
+let blinkCooldown = 3000; // 3초 쿨다운
+let blinkDistance = 100; // 점멸 거리
 
 // 랜덤 색상 생성
 function getRandomColor() {
@@ -696,6 +699,42 @@ function shootBullet() {
     });
 }
 
+// 점멸 이펙트 표시
+function showBlinkEffect() {
+    // 내 플레이어에 점멸 이펙트 추가
+    const myPlayer = isPlayer1 ? pvpPlayer1 : pvpPlayer2;
+    
+    // 잔상 효과 생성
+    const afterImage = document.createElement('div');
+    afterImage.style.position = 'absolute';
+    afterImage.style.left = myPlayer.style.left;
+    afterImage.style.top = myPlayer.style.top;
+    afterImage.style.width = '30px';
+    afterImage.style.height = '30px';
+    afterImage.style.borderRadius = '50%';
+    afterImage.style.background = isPlayer1 ? 'rgba(255, 100, 100, 0.5)' : 'rgba(100, 100, 255, 0.5)';
+    afterImage.style.transition = 'opacity 0.5s';
+    afterImage.style.pointerEvents = 'none';
+    
+    pvpBattlefield.appendChild(afterImage);
+    
+    // 페이드 아웃 효과
+    setTimeout(() => {
+        afterImage.style.opacity = '0';
+    }, 50);
+    
+    // 잔상 제거
+    setTimeout(() => {
+        afterImage.remove();
+    }, 600);
+    
+    // 플레이어에게 플래시 효과
+    myPlayer.style.filter = 'brightness(2)';
+    setTimeout(() => {
+        myPlayer.style.filter = 'brightness(1)';
+    }, 200);
+}
+
 // 총알 생성
 function createBullet(position, direction, isMyBullet = false) {
     const bullet = document.createElement('div');
@@ -1108,6 +1147,48 @@ document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault();
             shootBullet();
+        }
+        
+        // Q 키로 점멸 (순간이동)
+        if (e.code === 'KeyQ') {
+            e.preventDefault();
+            const currentTime = Date.now();
+            
+            // 쿨다운 체크
+            if (currentTime - lastBlinkTime >= blinkCooldown) {
+                lastBlinkTime = currentTime;
+                
+                // 현재 바라보는 방향으로 점멸
+                const directions = myDirection.split('-');
+                let newX = myPosition.x;
+                let newY = myPosition.y;
+                
+                directions.forEach(dir => {
+                    switch (dir) {
+                        case 'up': newY -= blinkDistance; break;
+                        case 'down': newY += blinkDistance; break;
+                        case 'left': newX -= blinkDistance; break;
+                        case 'right': newX += blinkDistance; break;
+                    }
+                });
+                
+                // 경계 체크
+                newX = Math.max(0, Math.min(730, newX));
+                newY = Math.max(0, Math.min(490, newY));
+                
+                myPosition.x = newX;
+                myPosition.y = newY;
+                
+                updatePvPPlayerPositions();
+                socket.emit('pvpMove', {
+                    gameId: pvpGameId,
+                    position: myPosition,
+                    direction: myDirection
+                });
+                
+                // 점멸 이펙트 표시
+                showBlinkEffect();
+            }
         }
         
         // 위치나 방향이 변경되었으면 서버에 전송
