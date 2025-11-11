@@ -14,7 +14,8 @@ const io = socketIo(server, {
 });
 
 // 검열어 목록
-const bannedWords = ['이하준', '꼭지', '꼬추', '고추', 'cm', '센치', '센티'];
+const bannedWords = ['꼭지', '꼬추', '고추', 'cm', '센치', '센티', '꼭', '지','젖' ]
+]=;
 
 // 검열어 체크 함수
 function containsBannedWord(text) {
