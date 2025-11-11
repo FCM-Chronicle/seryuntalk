@@ -13,6 +13,15 @@ const io = socketIo(server, {
   }
 });
 
+// 검열어 목록
+const bannedWords = ['이하준', '꼭지', '꼬추', '고추', 'cm', '센치', '센티'];
+
+// 검열어 체크 함수
+function containsBannedWord(text) {
+  const lowerText = text.toLowerCase();
+  return bannedWords.some(word => lowerText.includes(word.toLowerCase()));
+}
+
 // 정적 파일 제공 (public 폴더)
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -239,6 +248,15 @@ io.on('connection', (socket) => {
   // 사용자 입장 처리
   socket.on('join', (userData) => {
     console.log('사용자 입장 시도:', userData.username);
+    
+    // 검열어 체크
+    if (containsBannedWord(userData.username)) {
+      socket.emit('joinError', {
+        error: 'username_banned',
+        message: '사용할 수 없는 단어가 포함되어 있습니다. 다른 닉네임을 선택해주세요.'
+      });
+      return;
+    }
     
     // 닉네임 검증: 공백 확인
     if (userData.username.includes(' ')) {
